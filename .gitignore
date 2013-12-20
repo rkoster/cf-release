@@ -17,3 +17,5 @@ blobs
 Gemfile.lock
 .bundle
 **/*.iml
+tmp
+my*.yml

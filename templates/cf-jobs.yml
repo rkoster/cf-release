@@ -1,5 +1,7 @@
 networks: (( merge ))
 
+name: (( merge ))
+
 meta:
   environment: ~
 
@@ -211,7 +213,7 @@ jobs:
         static_ips: (( merge ))
     properties:
       networks: (( meta.networks.z1 ))
-      leader_ip: (( jobs.etcd_leader_z1.networks.cf1.static_ips.[0] ))
+      leader_ip: (( meta.hosts.etcd_z1 ))
 
   - name: etcd_z2
     template: etcd
@@ -223,7 +225,7 @@ jobs:
         static_ips: (( merge ))
     properties:
       networks: (( meta.networks.z2 ))
-      leader_ip: (( jobs.etcd_leader_z1.networks.cf1.static_ips.[0] ))
+      leader_ip: (( meta.hosts.etcd_z1 ))
 
   - name: hm9000_z1
     release: (( meta.release.name ))

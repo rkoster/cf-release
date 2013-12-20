@@ -1,0 +1,9 @@
+---
+name: (( merge ))
+
+meta:
+  hosts:
+    loggregator_trafficcontroller_z1:
+      cf1: (( "0.loggregator_trafficcontroller_z1.cf1." name ".microbosh" ))
+
+    etcd_z1: (( "0.etcd_leader_z1.cf1." name ".microbosh" ))

@@ -20,11 +20,11 @@ jobs:
   - name: logs_z2
     instances: 0
 
-  - name: router_z2
-    instances: 0
-
   - name: runner_z1
     instances: 1
+
+  - name: router_z2
+    instances: 0
 
   - name: runner_z2
     instances: 0
