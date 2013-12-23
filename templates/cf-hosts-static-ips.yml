@@ -6,4 +6,13 @@ meta:
       cf1: (( jobs.loggregator_trafficcontroller_z1.networks.cf1.static_ips.[0] || nil ))
       cf2: (( jobs.loggregator_trafficcontroller_z1.networks.cf2.static_ips.[0] || nil ))
 
-    etcd_z1: (( jobs.etcd_leader_z1.networks.cf1.static_ips.[0] ))
+    etcd_z1: (( jobs.etcd_leader_z1.networks.cf1.static_ips.[0] || nil ))
+
+networks: (( merge ))
+
+jobs: 
+  - name: etcd_leader_z1
+    instances: 1
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(1) ))
