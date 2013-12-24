@@ -12,29 +12,24 @@ meta:
     
 name: (( merge ))
 
-jobs:
-  - name: etcd_z1
-    properties:
-      leader_ip: (( "0.etcd_leader_z1.cf1." name ".microbosh" ))
-
 compilation:
   cloud_properties:
     instance_type: m1.medium
 
-networks:
-  - name: floating
-    type: vip
-    cloud_properties: {}
-  - name: cf1
-    type: dynamic
-    cloud_properties:
-      security_groups:
-        - default
-  - name: cf2
-    type: dynamic
-    cloud_properties:
-      security_groups:
-        - default
+networks: (( merge ))
+  # - name: floating
+  #   type: vip
+  #   cloud_properties: (( merge ))
+  # - name: cf1
+  #   type: dynamic
+  #   cloud_properties:
+  #     security_groups:
+  #       - default
+  # - name: cf2
+  #   type: dynamic
+  #   cloud_properties:
+  #     security_groups:
+  #       - default
 
 resource_pools:
   - name: small_z1
