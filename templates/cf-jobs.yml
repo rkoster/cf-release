@@ -23,6 +23,7 @@ meta:
     z2:
       host: (( jobs.loggregator_trafficcontroller_z2.networks.cf2.static_ips.[0] || nil ))
 
+  hosts: (( merge ))
 
 jobs:
   - name: ha_proxy_z1
