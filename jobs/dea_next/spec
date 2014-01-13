@@ -3,7 +3,7 @@ name: dea_next
 templates:
   dea.yml.erb: config/dea.yml
   dea_ctl.erb: bin/dea_ctl
-  drain.erb: bin/drain
+  deterministic_drain.rb: bin/drain
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
 
 
@@ -46,6 +46,9 @@ properties:
   dea_next.max_staging_duration:
     description:
     default: 900
+  dea_next.default_health_check_timeout:
+    description: Default timeout for application to start
+    default: 60
   dea_next.memory_mb:
     description:
     default: 8000
@@ -59,6 +62,12 @@ properties:
   dea_next.streaming_timeout:
     description:
     default: 60
+  dea_next.staging_cpu_limit_shares:
+    description: CPU limit in shares for staging tasks cgroup
+    default: 512
+  dea_next.instance_cpu_limit_shares:
+    description: CPU limit in shares for running instances cgroup
+    default: 256
   dea_next.directory_server_protocol:
     description: 'The protocol to use when communicating with the directory server ("http" or "https")'
     default: 'https'
@@ -68,9 +77,12 @@ properties:
   dea_next.mtu:
     description: "Interface MTU size"
     default: 1500
-  dea_next.evacuation_delay:
+  dea_next.evacuation_bail_out_time_in_seconds:
     description: "Duration to wait before shutting down, in seconds."
     default: 115
+  dea_next.zone:
+    description: "The Availability Zone"
+    default: "default"
   disk_quota_enabled:
     description: "disk quota must be disabled to use warden-inside-warden with the warden cpi"
     default: true

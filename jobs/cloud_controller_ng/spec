@@ -7,6 +7,7 @@ templates:
   cloud_controller_ng.yml.erb: config/cloud_controller_ng.yml
   cloud_controller_ng_ctl.erb: bin/cloud_controller_ng_ctl
   cloud_controller_jobs_ctl.erb: bin/cloud_controller_jobs_ctl
+  cloud_controller_clock_ctl.erb: bin/cloud_controller_clock_ctl
   stacks.yml.erb: config/stacks.yml
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   nfs-common: config/nfs-common
@@ -72,7 +73,19 @@ properties:
     description: "NFS server for droplets and apps (not used in an AWS deploy, use s3 instead)"
   nfs_server.nfsv4:
     description: "bool to use NFS4 (not used in an AWS deploy, use s3 instead)"
+  nfs_server.idmapd_domain:
+    description: "Domain name for NFS idmapd"
+    default: "localdomain"
+  nfs_server.pipefs_directory:
+    description: "Pipefs directory for NFS idmapd"
+    default: "/var/lib/nfs/rpc_pipefs"
 
+  ccng.app_events.cutoff_age_in_days:
+    description: "How old an app event should stay in cloud controller database before being cleaned up"
+    default: 31
+  ccng.app_usage_events.cutoff_age_in_days:
+    description: "How old an app usage event should stay in cloud controller database before being cleaned up"
+    default: 31
   ccng.info.name:
     description: "name attribute in the /info endpoint"
   ccng.info.build:
@@ -127,6 +140,9 @@ properties:
   ccng.max_staging_runtime:
     default: 900
     description: "Timeout for staging a droplet"
+  ccng.maximum_health_check_timeout:
+    default: 180
+    description: "Maximum health check timeout that can be set for the app"
 
   ccng.stacks:
     default:
@@ -140,27 +156,19 @@ properties:
   ccng.staging_upload_password:
     description: "S3 Secure Access Key for staging droplets on AWS installs; Blobstore password for other IaaSs"
 
-  ccng.quota_definitions.free.non_basic_services_allowed:
-    default: false
-  ccng.quota_definitions.free.total_services:
-    default: 2
-  ccng.quota_definitions.free.memory_limit:
-    default: 1024 # 1 GB
-  ccng.quota_definitions.paid.non_basic_services_allowed:
-    default: true
-  ccng.quota_definitions.paid.total_services:
-    default: 32
-  ccng.quota_definitions.paid.memory_limit:
-    default: 204800 # 200 GB
-  ccng.quota_definitions.runaway.non_basic_services_allowed:
-    default: true
-  ccng.quota_definitions.runaway.total_services:
-    default: 500
-  ccng.quota_definitions.runaway.memory_limit:
-    default: 204800 # 200 GB
+  ccng.quota_definitions:
+    description: "Hash of default quota definitions. Overriden by custom quota definitions."
+
   ccng.default_quota_definition:
-    default: free
+    default: default
     description: "Local to use a local (NFS) file system.  AWS to use AWS."
+
+  ccng.default_fog_connection.provider:
+    description: "Local fog provider (should always be 'Local'), used if fog_connection hash is not provided in the manifest"
+    default: "Local"
+  ccng.default_fog_connection.local_root:
+    description: "Local root when fog provider is not overridden (should be an NFS mount if using more than one cloud controller)"
+    default: "/var/vcap/nfs/store"
 
   ccng.resource_pool.minimum_size:
     description: "Minimum size of a resource to add to the pool"
@@ -171,27 +179,8 @@ properties:
   ccng.resource_pool.resource_directory_key:
     description: "Directory (bucket) used store app resources.  It does not have be pre-created."
     default: "cc-resources"
-  ccng.resource_pool.fog_connection.provider:
-    description: "Local for shared resources on NFS. AWS to place them in S3. OpenStack to place them in swift."
-    default: "Local"
-  ccng.resource_pool.fog_connection.aws_access_key_id:
-    description: "AWS access key used to access the resources bucket"
-  ccng.resource_pool.fog_connection.aws_secret_access_key:
-    description: "AWS secret key used to access the resources bucket"
-  ccng.resource_pool.fog_connection.local_root:
-    description: "The directory used as the root for the Local fog provider"
-    default: "/var/vcap/nfs/shared"
-  ccng.resource_pool.fog_connection.openstack_username:
-    description: "OpenStack username to assess the resource container"
-  ccng.resource_pool.fog_connection.openstack_api_key:
-    description: "OpenStack secret key to assess the resource container"
-  ccng.resource_pool.fog_connection.openstack_auth_url:
-    description: "OpenStack authorization link"
-  ccng.resource_pool.fog_connection.openstack_tenant:
-    description: "OpenStack tenant name"
-  ccng.resource_pool.fog_connection.openstack_temp_url_key:
-    description: "OpenStack temporary URL key used to create temporary URLs to blobs"
-    default: cc-resource-pool-key
+  ccng.resource_pool.fog_connection:
+    description: "Fog connection hash"
   ccng.resource_pool.cdn.uri:
     description: "URI for a CDN to used for resource pool downloads"
     default: ""
@@ -205,27 +194,8 @@ properties:
   ccng.packages.app_package_directory_key:
     description: "Directory (bucket) used store app packages.  It does not have be pre-created."
     default: "cc-packages"
-  ccng.packages.fog_connection.provider:
-    description: "Local for shared resources on NFS. AWS to place them in S3. OpenStack to place them in swift."
-    default: "Local"
-  ccng.packages.fog_connection.aws_access_key_id:
-    description: "AWS access key used to access the packages bucket"
-  ccng.packages.fog_connection.aws_secret_access_key:
-    description: "AWS secret key used to access the packages bucket"
-  ccng.packages.fog_connection.local_root:
-    description: "The directory used as the root for the Local fog provider"
-    default: "/var/vcap/nfs/shared"
-  ccng.packages.fog_connection.openstack_username:
-    description: "OpenStack username to assess the packages container"
-  ccng.packages.fog_connection.openstack_api_key:
-    description: "OpenStack secret key to assess the packages container"
-  ccng.packages.fog_connection.openstack_auth_url:
-    description: "OpenStack authorization link"
-  ccng.packages.fog_connection.openstack_tenant:
-    description: "OpenStack tenant name"
-  ccng.packages.fog_connection.openstack_temp_url_key:
-    description: "OpenStack temporary URL key used to create temporary URLs to blobs"
-    default: cc-packages-key
+  ccng.packages.fog_connection:
+    description: "Fog connection hash"
   ccng.packages.cdn.uri:
     description: "URI for a CDN to used for app package downloads"
     default: ""
@@ -239,27 +209,8 @@ properties:
   ccng.droplets.droplet_directory_key:
     description: "Directory (bucket) used store droplets.  It does not have be pre-created."
     default: "cc-droplets"
-  ccng.droplets.fog_connection.provider:
-    description: "Local for droplets on NFS. AWS to place them in S3. OpenStack to place them in swift."
-    default: "Local"
-  ccng.droplets.fog_connection.aws_access_key_id:
-    description: "AWS access key used to access the droplets bucket"
-  ccng.droplets.fog_connection.aws_secret_access_key:
-    description: "AWS secret key used to access the droplets bucket"
-  ccng.droplets.fog_connection.local_root:
-    description: "The directory used as the root for the Local fog provider"
-    default: "/var/vcap/nfs/shared"
-  ccng.droplets.fog_connection.openstack_username:
-    description: "OpenStack username to assess the droplet container"
-  ccng.droplets.fog_connection.openstack_api_key:
-    description: "OpenStack secret key to assess the droplet container"
-  ccng.droplets.fog_connection.openstack_auth_url:
-    description: "OpenStack authorization link"
-  ccng.droplets.fog_connection.openstack_tenant:
-    description: "OpenStack tenant name"
-  ccng.droplets.fog_connection.openstack_temp_url_key:
-    description: "OpenStack temporary URL key used to create temporary URLs to blobs"
-    default: cc-droplets-key
+  ccng.droplets.fog_connection:
+    description: "Fog connection hash"
   ccng.droplets.cdn.uri:
     description: "URI for a CDN to used for droplet downloads"
     default: ""
@@ -273,27 +224,8 @@ properties:
   ccng.buildpacks.buildpack_directory_key:
     description: "Directory (bucket) used store buildpacks.  It does not have be pre-created."
     default: "cc-buildpacks"
-  ccng.buildpacks.fog_connection.provider:
-    description: "Local for buildpacks on NFS. AWS to place them in S3. OpenStack to place them in swift."
-    default: "Local"
-  ccng.buildpacks.fog_connection.aws_access_key_id:
-    description: "AWS access key used to access the buildpacks bucket"
-  ccng.buildpacks.fog_connection.aws_secret_access_key:
-    description: "AWS secret key used to access the buildpacks bucket"
-  ccng.buildpacks.fog_connection.local_root:
-    description: "The directory used as the root for the Local fog provider"
-    default: "/var/vcap/nfs/shared"
-  ccng.buildpacks.fog_connection.openstack_username:
-    description: "OpenStack username to assess the buildpack container"
-  ccng.buildpacks.fog_connection.openstack_api_key:
-    description: "OpenStack secret key to assess the buildpack container"
-  ccng.buildpacks.fog_connection.openstack_auth_url:
-    description: "OpenStack authorization link"
-  ccng.buildpacks.fog_connection.openstack_tenant:
-    description: "OpenStack tenant name"
-  ccng.buildpacks.fog_connection.openstack_temp_url_key:
-    description: "OpenStack temporary URL key used to create temporary URLs to blobs"
-    default: cc-buildpacks-key
+  ccng.buildpacks.fog_connection:
+    description: "Fog connection hash"
   ccng.buildpacks.cdn.uri:
     description: "URI for a CDN to used for buildpack downloads"
     default: ""
@@ -369,7 +301,9 @@ properties:
   ccng.tasks_disabled:
     default: false
     description: "Disable tasks endpoint"
-
+  ccng.default_app_memory:
+    default: 1024
+    description: "How much memory given to an app if not specified"
   ccng.hm9000_noop:
     default: true
     description: "Disable processing HM9000 messages"
@@ -404,3 +338,16 @@ properties:
   ccng.newrelic.log_file_path:
     default: "/var/vcap/sys/log/cloud_controller_ng/newrelic"
     description: "The location for NewRelic to log to"
+  ccng.newrelic.capture_params:
+    default: false
+    description: "Capture and send query params to NewRelic"
+  ccng.newrelic.transaction_tracer.enabled:
+    default: false
+    description: "Enable transaction tracing in NewRelic"
+  ccng.newrelic.transaction_tracer.record_sql:
+    default: "off"
+    description: "NewRelic's SQL statement recording mode: [off | obfuscated | raw]"
+
+  ccng.process_group:
+    default: cloud_controller
+    description: "Determines what processes to run for the job"
